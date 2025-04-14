@@ -1,0 +1,19 @@
+# Node.js loyihalari uchun umumiy qoidalar
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Maxfiy ma'lumotlar
+.env
+
+# Vaqtinchalik fayllar
+*.log
+dist/
+build/
+
+# MacOS tizim fayllari
+.DS_Store
+
+# IDE va muharrir fayllari
+.vscode/
+.idea/
