@@ -1,6 +1,29 @@
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
+import { z } from "zod";
 import { Order, User, Product } from "../models/index.js";
+import { validate } from "../middleware/validate.js";
+import { paginate } from "../utils/pagination.js";
 
+// Validatsiya sxemasi
+const orderSchema = z.object({
+  status: z
+    .enum(["processing", "shipped", "delivered"], {
+      message:
+        "Holati faqat 'processing', 'shipped' yoki 'delivered' bolishi kerak",
+    })
+    .optional(),
+  total: z
+    .number()
+    .min(0, { message: "Umumiy narx 0 dan kichik bolmasligi kerak" })
+    .optional(),
+  user: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+    message: "Foydalanuvchi IDsi notogri",
+  }),
+  product: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+    message: "Mahsulot IDsi notogri",
+  }),
+});
 export const orderController = {
   // Yangi buyurtma qo'shish
   create: async (req, res, next) => {
@@ -110,12 +133,25 @@ export const orderController = {
   // Barcha buyurtmalarni olish
   findAll: async (req, res, next) => {
     try {
-      const orders = await Order.find()
-        .populate("user", "email")
-        .populate("product", "name price");
+      const { page, limit } = req.query;
+      const {
+        results: orders,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
+      } = await paginate(Order, page, limit, [
+        { path: "user", select: "email" },
+        { path: "product", select: "name price" },
+      ]);
+
       res.status(StatusCodes.OK).json({
-        message: "Orders retrieved successfully",
+        message: "Buyurtmalar muvaffaqiyatli olingan",
         orders,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
       });
     } catch (err) {
       next(err);
@@ -172,3 +208,5 @@ export const orderController = {
     }
   },
 };
+
+export const validateOrder = validate(orderSchema);

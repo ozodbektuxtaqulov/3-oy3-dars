@@ -1,6 +1,28 @@
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
+import { z } from "zod";
 import { Product, Category } from "../models/index.js";
+import { validate } from "../middleware/validate.js";
+import { paginate } from "../utils/pagination.js";
 
+
+const productSchema = z.object({
+  name: z
+    .string()
+    .min(3, {
+      message: "Mahsulot nomi kamida 3 belgidan iborat bolishi kerak",
+    })
+    .max(100, { message: "Mahsulot nomi 100 belgi dan oshmasligi kerak" }),
+  price: z.number().min(0, { message: "Narx 0 dan kichik bolmasligi kerak" }),
+  description: z.string().min(1, { message: "Tavsif bosh bolmasligi kerak" }),
+  stock: z
+    .number()
+    .min(0, { message: "Stok 0 dan kichik bolmasligi kerak" })
+    .int({ message: "Stok butun son bolishi kerak" }),
+  category: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+    message: "Kategoriya IDsi notogri",
+  }),
+});
 export const productController = {
   // Yangi mahsulot qo'shish
   create: async (req, res, next) => {
@@ -96,10 +118,25 @@ export const productController = {
   // Barcha mahsulotlarni olish
   findAll: async (req, res, next) => {
     try {
-      const products = await Product.find().populate("category", "name");
+      const { page, limit } = req.query;
+      const {
+        results: products,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
+      } = await paginate(Product, page, limit, {
+        path: "category",
+        select: "name",
+      });
+
       res.status(StatusCodes.OK).json({
-        message: "Products retrieved successfully",
+        message: "Mahsulotlar muvaffaqiyatli olingan",
         products,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
       });
     } catch (err) {
       next(err);
@@ -147,3 +184,5 @@ export const productController = {
     }
   },
 };
+
+export const validateProduct = validate(productSchema);

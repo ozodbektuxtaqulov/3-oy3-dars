@@ -1,5 +1,22 @@
 import { StatusCodes } from "http-status-codes";
+import { z } from "zod";
 import { User } from "../models/index.js";
+import { validate } from "../middleware/validate.js";
+import { paginate } from "../utils/pagination.js";
+
+// Validatsiya sxemasi
+const userSchema = z.object({
+  full_name: z
+    .string()
+    .min(3, { message: "Ism kamida 3 belgidan iborat bolishi kerak" })
+    .max(100, { message: "Ism 100 belgi dan oshmasligi kerak" })
+    .optional(),
+  email: z.string().email({ message: "Email formati notogri" }),
+  password: z
+    .string()
+    .min(5, { message: "Parol kamida 5 belgidan iborat bolishi kerak" })
+    .max(50, { message: "Parol 50 belgi dan oshmasligi kerak" }),
+});
 
 export const userController = {
   // Yangi foydalanuvchi qo'shish
@@ -84,10 +101,22 @@ export const userController = {
   // Barcha foydalanuvchilarni olish
   findAll: async (req, res, next) => {
     try {
-      const users = await User.find().select("-password"); // Parolni javobdan olib tashlash
+      const { page, limit } = req.query;
+      const {
+        results: users,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
+      } = await paginate(User, page, limit);
+
       res.status(StatusCodes.OK).json({
-        message: "Users retrieved successfully",
+        message: "Foydalanuvchilar muvaffaqiyatli olingan",
         users,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
       });
     } catch (err) {
       next(err);
@@ -135,3 +164,5 @@ export const userController = {
     }
   },
 };
+
+export const validateUser = validate(userSchema);

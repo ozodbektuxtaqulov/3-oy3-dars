@@ -1,5 +1,13 @@
 import { StatusCodes } from "http-status-codes";
+import { z } from "zod";
 import { Category } from "../models/index.js";
+import { validate } from "../middleware/validate.js";
+import { paginate } from "../utils/pagination.js";
+
+// Validatsiya sxemasi
+const categorySchema = z.object({
+  name: z.string().min(3, { message: "Kategoriya nomi kamida 3 belgidan iborat bolishi kerak" }).max(50, { message: "Kategoriya nomi 50 belgi dan oshmasligi kerak" }),
+});
 
 export const categoryController = {
   // Yangi kategoriya qo'shish
@@ -68,10 +76,22 @@ export const categoryController = {
   // Barcha kategoriyalarni olish
   findAll: async (req, res, next) => {
     try {
-      const categories = await Category.find();
+      const { page, limit } = req.query;
+      const {
+        results: categories,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
+      } = await paginate(Category, page, limit);
+
       res.status(StatusCodes.OK).json({
-        message: "Categories retrieved successfully",
+        message: "Kategoriyalar muvaffaqiyatli olingan",
         categories,
+        total,
+        totalPages,
+        currentPage,
+        pageSize,
       });
     } catch (err) {
       next(err);
@@ -119,3 +139,4 @@ export const categoryController = {
     }
   },
 };
+export const validateCategory = validate(categorySchema);
